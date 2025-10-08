@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot with Claude 3 Haiku</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #000000, #000000, #000000);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(to right, #1a2a6c, #371fb2);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-title h2 {
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+
+        .control-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            justify-content: flex-end;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            line-height: 1.4;
+        }
+
+        .user-message .message-bubble {
+            background: linear-gradient(to right, #1a2a6c, #1f37b2);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message .message-bubble {
+            background-color: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .bot-message .message-time {
+            text-align: left;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background-color: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #message-input:focus {
+            border-color: #1f3ab2;
+        }
+
+        #send-button {
+            background: linear-gradient(to right, #1a2a6c, #000000);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.3);
+        }
+
+        #send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 255, 255, 0.4);
+        }
+
+        #send-button:active {
+            transform: translateY(0);
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 30px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .typing-indicator.active {
+            opacity: 1;
+        }
+
+        .typing-dots {
+            display: flex;
+            background-color: white;
+            padding: 12px 16px;
+            border-radius: 18px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .typing-dots span {
+            height: 8px;
+            width: 8px;
+            background-color: #999;
+            border-radius: 50%;
+            display: block;
+            margin: 0 2px;
+            animation: typing 1s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .api-status.connected {
+            color: #4CAF50;
+        }
+
+        .api-status.connecting {
+            color: #FF9800;
+        }
+
+        .api-status.error {
+            color: #F44336;
+        }
+
+        .model-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+
+        /* Minimized state */
+        .chat-container.minimized {
+            height: 70px;
+        }
+
+        .chat-container.minimized .chat-messages,
+        .chat-container.minimized .chat-input-container {
+            display: none;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">
+                <div class="status-indicator"></div>
+                <div>
+                    <h2>Claude 3 Haiku</h2>
+                    <div class="api-status connected">
+                        <span>●</span>
+                        <span>Connected to OpenRouter</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="control-btn minimize-btn">−</button>
+                <button class="control-btn close-btn">×</button>
+            </div>
+        </div>
+        
+        <div class="chat-messages">
+            <div class="message bot-message">
+                <div class="message-bubble">
+                    Hello! I'm Claude 3 Haiku, an AI assistant powered by Anthropic. I'm here to help answer your questions, have conversations, or assist with tasks. What would you like to talk about today?
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+            <div class="typing-indicator">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="model-info">
+                Powered by Claude 3 Haiku via OpenRouter
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="message-input" placeholder="Ask me anything...">
+                <button id="send-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.querySelector('.chat-container');
+            const chatMessages = document.querySelector('.chat-messages');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const minimizeBtn = document.querySelector('.minimize-btn');
+            const closeBtn = document.querySelector('.close-btn');
+            const typingIndicator = document.querySelector('.typing-indicator');
+            const apiStatus = document.querySelector('.api-status');
+
+            // OpenRouter API configuration
+            const API_KEY = "YOUR_API_KEY";
+            const API_URL = "ENTER_HTTP_LINK_HERE";
+            const MODEL = "anthropic/claude-3-haiku";
+
+            // Function to add a message to the chat
+            function addMessage(message, isUser) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+                
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = 'message-bubble';
+                
+                const messageText = document.createElement('div');
+                // Preserve line breaks in the response
+                messageText.innerHTML = message.replace(/\n/g, '<br>');
+                
+                const timeDiv = document.createElement('div');
+                timeDiv.className = 'message-time';
+                timeDiv.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                bubbleDiv.appendChild(messageText);
+                bubbleDiv.appendChild(timeDiv);
+                messageDiv.appendChild(bubbleDiv);
+                
+                // Insert before the typing indicator
+                chatMessages.insertBefore(messageDiv, typingIndicator);
+                
+                // Scroll to the bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Function to call the OpenRouter API
+            async function callOpenRouterAPI(userMessage) {
+                try {
+                    apiStatus.classList.remove('connected', 'error');
+                    apiStatus.classList.add('connecting');
+                    apiStatus.innerHTML = '<span>●</span><span>Connecting to Claude 3 Haiku...</span>';
+                    
+                    const response = await fetch(API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${API_KEY}`,
+                            "HTTP-Referer": window.location.href,
+                            "X-Title": "Claude 3 Haiku Chatbot",
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            "model": MODEL,
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": userMessage
+                                }
+                            ]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    apiStatus.classList.remove('connecting');
+                    apiStatus.classList.add('connected');
+                    apiStatus.innerHTML = '<span>●</span><span>Connected to Claude 3 Haiku</span>';
+                    
+                    return data.choices[0].message.content;
+                } catch (error) {
+                    console.error('Error calling OpenRouter API:', error);
+                    apiStatus.classList.remove('connecting');
+                    apiStatus.classList.add('error');
+                    
+                    let errorMessage = "API Error: " + error.message;
+                    if (error.message.includes("401") || error.message.includes("403")) {
+                        errorMessage = "API authentication failed. Please check your API key.";
+                    } else if (error.message.includes("429")) {
+                        errorMessage = "Rate limit exceeded. Please try again later.";
+                    }
+                    
+                    apiStatus.innerHTML = `<span>●</span><span>${errorMessage}</span>`;
+                    return "I'm sorry, I encountered an error while processing your request. Please try again.";
+                }
+            }
+
+            // Function to handle sending a message
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                if (message === '') return;
+                
+                // Add user message
+                addMessage(message, true);
+                messageInput.value = '';
+                sendButton.disabled = true;
+                
+                // Show typing indicator
+                typingIndicator.classList.add('active');
+                
+                try {
+                    // Call OpenRouter API
+                    const botResponse = await callOpenRouterAPI(message);
+                    
+                    // Hide typing indicator
+                    typingIndicator.classList.remove('active');
+                    
+                    // Add bot response
+                    addMessage(botResponse, false);
+                } catch (error) {
+                    // Hide typing indicator
+                    typingIndicator.classList.remove('active');
+                    
+                    // Add error message
+                    addMessage("Sorry, I'm having trouble connecting to the AI service. Please check your API key and try again.", false);
+                } finally {
+                    sendButton.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+            
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            minimizeBtn.addEventListener('click', function() {
+                chatContainer.classList.toggle('minimized');
+                // Update button text
+                minimizeBtn.textContent = chatContainer.classList.contains('minimized') ? '+' : '−';
+            });
+            
+            closeBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to close the chat?')) {
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-size: 24px; text-align: center;">Chat closed.<br>Refresh the page to restart.</div>';
+                }
+            });
+
+            // Focus on input when page loads
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
